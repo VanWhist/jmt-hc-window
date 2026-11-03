@@ -46,6 +46,8 @@ button:disabled{opacity:.5;cursor:default}
 .bubble.me{background:var(--me);margin-left:24px}
 .bubble.ai{background:var(--paper);margin-right:24px}
 .bubble .who{display:block;font-size:12px;color:var(--muted);margin-bottom:2px}
+.past-head{font-size:13.5px;font-weight:700;color:var(--ink-2);margin:0}
+.divider{font-size:12.5px;color:var(--muted);text-align:center;border-top:1px solid var(--rule);padding-top:6px;margin-top:4px}
 .note{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:10px 12px;font-size:13.5px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -65,6 +67,7 @@ button:disabled{opacity:.5;cursor:default}
     <div class="status" id="usage" aria-live="polite"></div>
   </section>
 
+  <section class="log" id="past" aria-label="これまでのやりとり"></section>
   <section class="log" id="log" aria-label="会話" aria-live="polite"></section>
   <div id="msg" aria-live="polite"></div>
 
@@ -99,14 +102,37 @@ button:disabled{opacity:.5;cursor:default}
     d.textContent = text;
     el.appendChild(d);
   }
-  function bubble(who, text) {
+  function bubble(who, text, box, time) {
     var b = document.createElement('div');
     b.className = 'bubble ' + (who === 'me' ? 'me' : 'ai');
-    var w = document.createElement('span'); w.className = 'who'; w.textContent = who === 'me' ? 'あなた' : 'AI';
+    var w = document.createElement('span'); w.className = 'who';
+    w.textContent = (who === 'me' ? 'あなた' : 'AI') + (time ? '　' + time : '');
     b.appendChild(w);
     b.appendChild(document.createTextNode(text));
-    $('log').appendChild(b);
-    b.scrollIntoView({ block: 'nearest' });
+    (box || $('log')).appendChild(b);
+    if (!box) b.scrollIntoView({ block: 'nearest' });
+  }
+  function line(box, cls, text) {
+    var p = document.createElement('p'); p.className = cls; p.textContent = text; box.appendChild(p);
+  }
+  /** これまでのやりとり（記録から最近の分）。ページを開き直しても、LINE の中のブラウザでも同じものが出る */
+  function loadHistory() {
+    if (!API || !$('pass').value.trim()) return;
+    var box = $('past');
+    box.innerHTML = '';
+    line(box, 'status', 'これまでのやりとりを読んでいます…');
+    call({ action: 'history' }).then(function (r) {
+      box.innerHTML = '';
+      if (!r.ok) { line(box, 'status', r.message || 'これまでのやりとりを読めませんでした'); return; }
+      remember();
+      line(box, 'past-head', 'これまでのやりとり（最近の ' + r.items.length + ' 件）');
+      if (!r.items.length) { line(box, 'status', 'まだやりとりはありません'); return; }
+      r.items.forEach(function (it) {
+        bubble('me', it.q, box, String(it.t).slice(0, 16));
+        bubble('ai', it.a, box);
+      });
+      line(box, 'divider', 'ここから下が今の会話です');
+    }).catch(function () { box.innerHTML = ''; line(box, 'status', 'これまでのやりとりを読めませんでした（通信）'); });
   }
   function setUsage(used, limit) {
     if (typeof used === 'number' && typeof limit === 'number') $('usage').textContent = '今日のメッセージ：' + used + ' / ' + limit + ' 回';
@@ -168,6 +194,8 @@ button:disabled{opacity:.5;cursor:default}
     show('新しい会話にしました。前回までの話は AI が引き継いでいます', 'wait');
   });
   $('question').addEventListener('input', function () { $('count').textContent = $('question').value.length + ' / 1000'; });
+  $('pass').addEventListener('change', loadHistory);
+  loadHistory();
 })();
 </script>
 </body>
