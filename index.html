@@ -47,6 +47,17 @@ button:disabled{opacity:.5;cursor:default}
 .bubble.ai{background:var(--paper);margin-right:24px}
 .bubble .who{display:block;font-size:12px;color:var(--muted);margin-bottom:2px}
 .past-head{font-size:13.5px;font-weight:700;color:var(--ink-2);margin:0}
+.docs details{background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:10px 14px;margin-top:8px}
+.docs summary{cursor:pointer;font-weight:700;color:var(--accent);min-height:28px}
+.doc{font-size:14.5px;overflow-wrap:anywhere}
+.doc h3{font-size:17px;margin:14px 0 6px}.doc h4{font-size:15.5px;margin:12px 0 4px}.doc h5{font-size:14.5px;margin:10px 0 4px}
+.doc p,.doc ul{margin:4px 0}.doc ul{padding-left:20px}
+.doc blockquote{margin:6px 0;padding:6px 10px;background:var(--warn-bg);color:var(--warn);border-radius:6px}
+.doc pre{white-space:pre-wrap;background:var(--soft);border-radius:6px;padding:8px 10px;font:inherit;font-size:13.5px;margin:6px 0}
+.doc .tbl{overflow-x:auto;margin:6px 0}
+.doc table{border-collapse:collapse;font-size:13px;min-width:100%}
+.doc th,.doc td{border:1px solid var(--rule);padding:4px 6px;vertical-align:top;text-align:left;min-width:6.5em}
+.doc th{background:var(--soft)}
 .divider{font-size:12.5px;color:var(--muted);text-align:center;border-top:1px solid var(--rule);padding-top:6px;margin-top:4px}
 .note{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:10px 12px;font-size:13.5px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -56,10 +67,10 @@ button:disabled{opacity:.5;cursor:default}
 <div class="wrap">
   <header>
     <h1>島谷HC 相談窓口</h1>
-    <p class="lead">モーグル日本代表の協賛獲得と SNS について、AI が城さんとの共有資料をもとに答えます。前回までの話は AI が覚えていて、次の会話に引き継ぎます。</p>
+    <p class="lead">モーグル日本代表の協賛獲得と SNS について、島谷さんが考えを整理したり、資料を確かめたりするための相談窓口です。AI がチームの共有資料をもとに答え、前回までの話を覚えて次の会話に引き継ぎます。</p>
   </header>
 
-  <p class="note">AI の答えは案です。確定するのは城さんです。会話の内容と、AI がまとめた引き継ぎ（提案・依頼を含む）は、城さんが見られるように記録しています。選手の個人情報やパスワードは書かないでください。</p>
+  <p class="note">AI の答えは案で、AI は何も決めません。決めるのは島谷さんと城さんです。会話の内容と、AI がまとめた引き継ぎ（島谷さんの提案・依頼を含む）はチームの記録として残し、実務を受け持つ城さんと共有します。選手の個人情報やパスワードは書かないでください。</p>
 
   <section class="card" aria-label="合言葉">
     <label for="pass">合言葉</label>
@@ -67,6 +78,7 @@ button:disabled{opacity:.5;cursor:default}
     <div class="status" id="usage" aria-live="polite"></div>
   </section>
 
+  <section class="docs" id="docs" aria-label="資料"></section>
   <section class="log" id="past" aria-label="これまでのやりとり"></section>
   <section class="log" id="log" aria-label="会話" aria-live="polite"></section>
   <div id="msg" aria-live="polite"></div>
@@ -115,6 +127,63 @@ button:disabled{opacity:.5;cursor:default}
   function line(box, cls, text) {
     var p = document.createElement('p'); p.className = cls; p.textContent = text; box.appendChild(p);
   }
+  /** 資料の Markdown を、見出し・箇条書き・表・引用・枠だけの簡単な形で描く（文字は textContent で入れる） */
+  function renderDoc(md) {
+    var root = document.createElement('div'); root.className = 'doc';
+    var lines = String(md).split('\n'), i = 0;
+    function el(tag, text) { var e = document.createElement(tag); if (text != null) e.textContent = text.replace(/\*\*/g, ''); return e; }
+    function cells(l) { return l.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(function (c) { return c.trim(); }); }
+    while (i < lines.length) {
+      var l = lines[i];
+      if (/^```/.test(l)) {
+        var buf = []; i++;
+        while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]);
+        root.appendChild(el('pre', buf.join('\n'))); i++; continue;
+      }
+      if (/^\s*\|/.test(l)) {
+        var rows = [];
+        while (i < lines.length && /^\s*\|/.test(lines[i])) rows.push(cells(lines[i++]));
+        var wrap = el('div'); wrap.className = 'tbl';
+        var t = el('table');
+        rows.forEach(function (r, k) {
+          if (r.every(function (c) { return /^:?-+:?$/.test(c); })) return;   // 区切りの行
+          var tr = el('tr');
+          r.forEach(function (c) { tr.appendChild(el(k === 0 ? 'th' : 'td', c)); });
+          t.appendChild(tr);
+        });
+        wrap.appendChild(t); root.appendChild(wrap); continue;
+      }
+      if (/^\s*[-*] /.test(l) || /^\s*\d+\. /.test(l)) {
+        var ul = el('ul');
+        while (i < lines.length && (/^\s*[-*] /.test(lines[i]) || /^\s*\d+\. /.test(lines[i]))) {
+          ul.appendChild(el('li', lines[i].replace(/^\s*[-*] /, '').replace(/^\s*(\d+\.) /, '$1 '))); i++;
+        }
+        root.appendChild(ul); continue;
+      }
+      var h = /^(#{1,3}) (.*)$/.exec(l);
+      if (h) root.appendChild(el('h' + (h[1].length + 2), h[2]));
+      else if (/^> /.test(l)) root.appendChild(el('blockquote', l.slice(2)));
+      else if (l.trim()) root.appendChild(el('p', l.replace(/~~/g, '')));
+      i++;
+    }
+    return root;
+  }
+  /** 島谷HC に見せる資料（合言葉を入れたときだけ受け口から読む。公開のページのファイルには入れていない） */
+  function loadDocs() {
+    var box = $('docs');
+    call({ action: 'docs' }).then(function (r) {
+      box.innerHTML = '';
+      if (!r.ok || !r.items.length) return;
+      line(box, 'past-head', '資料（押すと開きます）');
+      r.items.forEach(function (d) {
+        var det = document.createElement('details');
+        var s = document.createElement('summary'); s.textContent = d.title + '（' + d.asOf + ' 時点）';
+        det.appendChild(s);
+        det.addEventListener('toggle', function () { if (det.open && det.children.length === 1) det.appendChild(renderDoc(d.body)); });
+        box.appendChild(det);
+      });
+    }).catch(function () { /* 資料が読めなくても会話は使える */ });
+  }
   /** これまでのやりとり（記録から最近の分）。ページを開き直しても、LINE の中のブラウザでも同じものが出る */
   function loadHistory() {
     if (!API || !$('pass').value.trim()) return;
@@ -125,6 +194,7 @@ button:disabled{opacity:.5;cursor:default}
       box.innerHTML = '';
       if (!r.ok) { line(box, 'status', r.message || 'これまでのやりとりを読めませんでした'); return; }
       remember();
+      loadDocs();
       line(box, 'past-head', 'これまでのやりとり（最近の ' + r.items.length + ' 件）');
       if (!r.items.length) { line(box, 'status', 'まだやりとりはありません'); return; }
       r.items.forEach(function (it) {
