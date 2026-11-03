@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>島谷HC 相談窓口</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap">
+<style>
+/* 構成：スマホで片手で使う 1 列。上に合言葉、まん中に会話（古いものが上）、下に入力欄。兵頭さんの窓口と同じ作り */
+:root{
+  --bg:#f4f6fa; --paper:#ffffff; --ink:#161c2b; --ink-2:#434b5e; --muted:#6a7287; --rule:#d6dbe6;
+  --accent:#3a4a85; --accent-ink:#ffffff; --soft:#e9edf6; --me:#eef1f8; --warn:#8a5a00; --warn-bg:#fbf3e3; --err:#a3302a; --err-bg:#fbeceb;
+  --f:"BIZ UDPGothic","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1320; --paper:#171c2c; --ink:#e4e7f0; --ink-2:#b8bfd2; --muted:#8f97ad; --rule:#2c3348;
+  --accent:#8fa2e6; --accent-ink:#0d1222; --soft:#1e2539; --me:#1c2336; --warn:#e7c27a; --warn-bg:#2d2615; --err:#f0928b; --err-bg:#331b1a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1320; --paper:#171c2c; --ink:#e4e7f0; --ink-2:#b8bfd2; --muted:#8f97ad; --rule:#2c3348;
+  --accent:#8fa2e6; --accent-ink:#0d1222; --soft:#1e2539; --me:#1c2336; --warn:#e7c27a; --warn-bg:#2d2615; --err:#f0928b; --err-bg:#331b1a; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.7}
+.wrap{max-width:720px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:flex;flex-direction:column;gap:16px}
+h1{font-size:22px;line-height:1.4;margin:0}
+.lead{margin:4px 0 0;color:var(--ink-2);font-size:14.5px}
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:14px 16px}
+label{display:block;font-weight:700;font-size:14px;margin-bottom:6px}
+input,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--rule);border-radius:8px;padding:10px 12px}
+input:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+textarea{min-height:96px;resize:vertical}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.count{font-size:13px;color:var(--muted);margin-left:auto}
+button{font:inherit;cursor:pointer;border-radius:999px;border:1px solid var(--accent);background:var(--paper);color:var(--accent);padding:8px 16px;min-height:44px}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:700}
+button:disabled{opacity:.5;cursor:default}
+.status{font-size:13.5px;color:var(--ink-2)}
+.msg{border-radius:8px;padding:10px 12px;font-size:14.5px}
+.msg.err{background:var(--err-bg);color:var(--err)}
+.msg.wait{background:var(--soft)}
+.log{display:flex;flex-direction:column;gap:10px}
+.bubble{border:1px solid var(--rule);border-radius:10px;padding:10px 14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.bubble.me{background:var(--me);margin-left:24px}
+.bubble.ai{background:var(--paper);margin-right:24px}
+.bubble .who{display:block;font-size:12px;color:var(--muted);margin-bottom:2px}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:10px 12px;font-size:13.5px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>島谷HC 相談窓口</h1>
+    <p class="lead">モーグル日本代表の協賛獲得と SNS について、AI が城さんとの共有資料をもとに答えます。前回までの話は AI が覚えていて、次の会話に引き継ぎます。</p>
+  </header>
+
+  <p class="note">AI の答えは案です。確定するのは城さんです。会話の内容と、AI がまとめた引き継ぎ（提案・依頼を含む）は、城さんが見られるように記録しています。選手の個人情報やパスワードは書かないでください。</p>
+
+  <section class="card" aria-label="合言葉">
+    <label for="pass">合言葉</label>
+    <input id="pass" type="password" autocomplete="current-password" placeholder="城さんから聞いた合言葉">
+    <div class="status" id="usage" aria-live="polite"></div>
+  </section>
+
+  <section class="log" id="log" aria-label="会話" aria-live="polite"></section>
+  <div id="msg" aria-live="polite"></div>
+
+  <section class="card" aria-label="質問">
+    <label for="question">質問・相談</label>
+    <textarea id="question" maxlength="1000" placeholder="例：前回の続きから。所属先に協賛を持ちかけるかについて、私の考えは…"></textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="primary" id="send" type="button">送る</button>
+      <button id="restart" type="button">新しい会話</button>
+      <span class="count" id="count">0 / 1000</span>
+    </div>
+  </section>
+</div>
+
+<script src="config.js"></script>
+<script>
+(function () {
+  var API = (window.QA_CONFIG || {}).API_URL || '';
+  var $ = function (id) { return document.getElementById(id); };
+  var sessionId = '';
+  var busy = false;
+  var POLL_MS = 3000, POLL_MAX = 100;   // 3 秒ごと、最大 5 分
+
+  try { $('pass').value = sessionStorage.getItem('qa_pass') || ''; sessionId = sessionStorage.getItem('qa_sid') || ''; } catch (e) { /* 保存できない環境でも使える */ }
+
+  function show(text, kind) {
+    var el = $('msg');
+    el.innerHTML = '';
+    if (!text) return;
+    var d = document.createElement('div');
+    d.className = 'msg ' + (kind || '');
+    d.textContent = text;
+    el.appendChild(d);
+  }
+  function bubble(who, text) {
+    var b = document.createElement('div');
+    b.className = 'bubble ' + (who === 'me' ? 'me' : 'ai');
+    var w = document.createElement('span'); w.className = 'who'; w.textContent = who === 'me' ? 'あなた' : 'AI';
+    b.appendChild(w);
+    b.appendChild(document.createTextNode(text));
+    $('log').appendChild(b);
+    b.scrollIntoView({ block: 'nearest' });
+  }
+  function setUsage(used, limit) {
+    if (typeof used === 'number' && typeof limit === 'number') $('usage').textContent = '今日のメッセージ：' + used + ' / ' + limit + ' 回';
+  }
+  function call(body) {
+    body.passphrase = $('pass').value.trim();
+    return fetch(API, { method: 'POST', body: JSON.stringify(body) })   // 本文は text/plain で送る（Apps Script の受け口に合わせる）
+      .then(function (r) { return r.json(); });
+  }
+  function remember() {
+    try { sessionStorage.setItem('qa_pass', $('pass').value.trim()); sessionStorage.setItem('qa_sid', sessionId); } catch (e) { /* 保存できなくても続ける */ }
+  }
+  function done() { busy = false; $('send').disabled = false; }
+
+  function poll(n) {
+    call({ action: 'poll', sessionId: sessionId }).then(function (r) {
+      if (!r.ok) { show(r.message || 'うまくいきませんでした', 'err'); if (r.error === 'expired') sessionId = ''; done(); return; }
+      if (!r.done) {
+        if (n >= POLL_MAX) { show('時間がかかっています。少ししてから「送る」で続けてください', 'err'); done(); return; }
+        setTimeout(function () { poll(n + 1); }, POLL_MS);
+        return;
+      }
+      show(r.note || '', r.note ? 'err' : '');
+      if (r.text) bubble('ai', r.text);
+      done();
+    }).catch(function () { show('通信できませんでした。電波のよいところで、もう一度お試しください', 'err'); done(); });
+  }
+
+  function send() {
+    var q = $('question').value.trim();
+    if (busy) return;
+    if (!API) { show('受け口がまだ設定されていません（城さんに連絡してください）', 'err'); return; }
+    if (!$('pass').value.trim()) { show('合言葉を入れてください', 'err'); $('pass').focus(); return; }
+    if (!q) { show('質問を入力してください', 'err'); $('question').focus(); return; }
+    busy = true; $('send').disabled = true;
+    var start = sessionId ? Promise.resolve({ ok: true, sessionId: sessionId }) : (show('会話を始めています', 'wait'), call({ action: 'start' }));
+    start.then(function (r) {
+      if (!r.ok) throw r;
+      sessionId = r.sessionId; remember();
+      return call({ action: 'send', sessionId: sessionId, text: q });
+    }).then(function (r) {
+      if (!r.ok) throw r;
+      bubble('me', q);
+      $('question').value = ''; $('count').textContent = '0 / 1000';
+      setUsage(r.used, r.limit);
+      show('AI が引き継ぎと資料を読んで答えています（30 秒〜2 分ほど）', 'wait');
+      poll(0);
+    }).catch(function (r) {
+      if (r && r.error === 'expired') sessionId = '';
+      show(r && r.message || '通信できませんでした。電波のよいところで、もう一度お試しください', 'err');
+      done();
+    });
+  }
+
+  $('send').addEventListener('click', send);
+  $('restart').addEventListener('click', function () {
+    if (busy) return;
+    sessionId = ''; remember(); $('log').innerHTML = '';
+    show('新しい会話にしました。前回までの話は AI が引き継いでいます', 'wait');
+  });
+  $('question').addEventListener('input', function () { $('count').textContent = $('question').value.length + ' / 1000'; });
+})();
+</script>
+</body>
+</html>
